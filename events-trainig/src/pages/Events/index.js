@@ -1,6 +1,6 @@
 import {Container, Col, Row, Card, Button , Modal, Form} from "react-bootstrap";
-import React, {useState,useEffect} from "react";
-import {Link} from 'react-router-dom';
+import React, {useState,useEffect, useRef} from "react";
+//import {CardLink} from 'react-router-dom';
 
 import api from '../../services/api';
 
@@ -15,54 +15,37 @@ export default function Events(){
     const [localization, setLocalization] = useState('');
     const [beginDate, setBeginDate] = useState('');
     const [finishDate, setFinishDate] = useState('');
-
-    const hadleNewEvent = () => setNewEvent(!newEvent);
-  
-    const createEvent = () =>{
     
-          const eventData = {
-              name: name,
-              description: description,
-              organizer: organizer,
-              localization: localization,
-              beginDate: beginDate,
-              finishDate: finishDate
-          }
-          return eventData;
-    }
+    const isSubscribed = useRef(true);
 
-   const postNewEvent = async () =>{
-         
-       try{
-           
-         await api.post('events', createEvent());
-         hadleNewEvent(newEvent);
-
-        }catch(err){
-             console.log(err);
-        }
-   }
+    const postNewEvent = async () =>{
+       
+    const eventData = {
+        
+           name: name,
+           description: description,
+           organizer: organizer,
+           localization: localization,
+           beginDate: beginDate,
+           finishDate: finishDate
+         }
+        await api.post('events', eventData);           
+        isSubscribed.current = true;
+     }
 
     useEffect(() =>{
               
-        let isSubscribed = true;
+        isSubscribed.current = true;
 
-        async function retriveEvent(){
-
-            try{
-
-                 const eventsList = await api.get('events');
-                 setEvents(eventsList.data);
-        
-            }catch(err){
-                console.log(err.response);
-            }
+        async function retriveEvent(){    
+            const eventsList = await api.get('events');
+            setEvents(eventsList.data);
         }
-        if(isSubscribed){
+
+        if(isSubscribed.current)
             retriveEvent();
-        }
-
-        return () => isSubscribed = false;
+        
+        return () => isSubscribed.current = false;
         
     }, [events]);
 
@@ -70,16 +53,15 @@ export default function Events(){
     return (
       <>
       <Container fluid>
-
           <Row>
             <Col sm={4} md={8}>
                    <h1>Eventos</h1>
              </Col>
               <Col>
-                  <Button variant="primary" onClick={hadleNewEvent}>Novo evento</Button>
+                  <Button variant="primary" onClick={() => setNewEvent(true)}>Novo evento</Button>
               </Col>
 
-            <Modal show={newEvent} onHide={hadleNewEvent}>
+            <Modal show={newEvent} onHide={() => setNewEvent(false)}>
 
                 <Modal.Title> Criação de um novo Evento</Modal.Title>
                      <Modal.Header> Entre com dos dados do Evento </Modal.Header>
@@ -120,8 +102,8 @@ export default function Events(){
 
                  </Modal.Body>
                      <Modal.Footer>
-                       <Button variant="danger" onClick={hadleNewEvent}> Cancelar </Button>
-                       <Button variant="success" onClick={postNewEvent}> Criar evento </Button>
+                       <Button variant="danger" onClick={() => setNewEvent(false)}> Cancelar </Button>
+                       <Button variant="success" onClick={() => {postNewEvent(); setNewEvent(false);}}> Criar evento </Button>
                      </Modal.Footer>
             </Modal>
 
@@ -138,8 +120,7 @@ export default function Events(){
                                   {e.description}
                               </Card.Text>
                               <Card.Footer> Data inicio {e.beginDate}  <br/> Data fim {e.finishDate}</Card.Footer>
-                
-                            <Card.Link href="#"> <Link to={`/programations/${e.id}`} >Programação do evento</Link> </Card.Link> 
+                              <Card.Link to={`/programations/${e.id}`} href={`/programations/${e.id}`}> Programação do evento </Card.Link> 
                           </Card.Body>
                       </Card>
                   </Col>) }

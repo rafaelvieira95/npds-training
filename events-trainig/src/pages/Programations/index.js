@@ -1,5 +1,5 @@
 
-import React,{useEffect, useState} from 'react';
+import React,{useRef, useEffect, useState} from 'react';
 import {useParams} from 'react-router-dom';
 import {Container, Row, Col, Card, Button, Modal, Form, Toast} from 'react-bootstrap';
 import api from '../../services/api';
@@ -8,6 +8,8 @@ export default function Programation(){
      
   const now = new Date();
   
+  const isSubscribed = useRef(true);
+
   const {id} = useParams();
   const eventPath = `events/${id}`;
   
@@ -28,39 +30,37 @@ export default function Programation(){
     const [finishRegistration, setFinishRegistration] = useState('');
 
    
+    async function getNewProgramations(){
+      const response = await api.get(eventPath);
+      setEvent(response.data);  
+   }
+
+
        useEffect(()=> {
 
-        let isSubscribed = true;
-  
-              async function getNewProgramations(){
-                  const response = await api.get(eventPath);
-                  setEvent(response.data);  
+             isSubscribed.current = true;
+             
+             if(isSubscribed.current){
+
+                  getNewProgramations();
+                  //resetar todos os campos
+                  setName('');
+                  setPresenter('');
+                  setDescription('');
+                  setBeginDate('');
+                  setFinishDate('');
+                  setStartTime('');
+                  setEndTime('');
+                  setWorkload(0);
+                  setBeginRegistration('');
+                  setFinishRegistration('');
              }
             
-             if(isSubscribed){
-               
-               getNewProgramations();
-               //resetar todos os campos
-               setName('');
-               setPresenter('');
-               setDescription('');
-               setBeginDate('');
-               setFinishDate('');
-               setStartTime('');
-               setEndTime('');
-               setWorkload(0);
-               setBeginRegistration('');
-               setFinishRegistration('');
-            }
 
-            return () => isSubscribed = false;
+            return () => isSubscribed.current = false;
             
        }, [eventPath]);
 
-
-    const hadleNewProgramation = (state) =>{
-          setNewProgramation(state);
-      }
   
 
     const postNewProgramation = async () =>{
@@ -83,16 +83,17 @@ export default function Programation(){
                      event: event,
                   };
 
-                 const response = await api.post(`programations`, programations);
-                 event.programations = [response.data, ...event.programations];
-                //toda e qualquer alteração, esconder o modal e ativar o toast
-                hadleNewProgramation(false);
-                setShow(true);
-              
+                 await api.post(`programations`, programations);
+                 //toda e qualquer alteração, esconder o modal e ativar o toast
+                 setNewProgramation(false);
+                 setShow(true);
+                
+                 getNewProgramations();
+        
             }else{
                 console.warn('campos em branco!');
              }
-      }
+         }
 
     return (
      
@@ -100,7 +101,7 @@ export default function Programation(){
     
           <Row>
           <Col xs={4} sm={4} md={8} xl={8} >
-                <Button style={{marginBottom: "10px"}} variant="primary" onClick={hadleNewProgramation}> Adicionar </Button>  
+                <Button style={{marginBottom: "10px"}} variant="primary" onClick={() => setNewProgramation(true)}> Adicionar </Button>  
           </Col>
 
           <Col xs={8} sm={8} md={4} xl={4}>
@@ -117,7 +118,7 @@ export default function Programation(){
 
          <Row>
       
-            <Modal show={newProgramation} onHide={() => hadleNewProgramation(false)}>
+            <Modal show={newProgramation} onHide={() => setNewProgramation(false)}>
              <Modal.Title> Nova programação para o evento </Modal.Title>
                   <Modal.Header> preencha os dados da programação</Modal.Header>
               <Modal.Body>
@@ -175,7 +176,7 @@ export default function Programation(){
               </Modal.Body>
               
               <Modal.Footer>
-                 <Button variant="danger" onClick={() => hadleNewProgramation(false)}> Cancelar </Button>
+                 <Button variant="danger" onClick={() => setNewProgramation(false)}> Cancelar </Button>
                  <Button variant="success" onClick={postNewProgramation}>  Criar programação </Button>
               </Modal.Footer>
             </Modal>
